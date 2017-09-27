@@ -4,6 +4,9 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 public class LogFileParser {
 
 	public void getLogFileProperties(LogFile file) {
@@ -60,6 +63,13 @@ public class LogFileParser {
 							newBlock.parametersArrayList.add(string);
 						}
 					}
+					else
+					{
+						arguments = arguments.trim();
+						if (arguments.contains(")"))
+							arguments = arguments.substring(0, arguments.length() - 1);
+						newBlock.parametersArrayList.add(arguments);
+					}
 				}
 
 				// Handle {
@@ -113,6 +123,31 @@ public class LogFileParser {
 		}
 
 	}
+	public void serializeToJSON(LogFile file){
+		try {
+
+			ArrayList<JSONObject> blocksArrayList = new ArrayList<>();
+			for (Block block : file.blocks) {
+				JSONObject temp = new JSONObject();
+				temp.put("ActionType:", block.actionType);
+				temp.put("Action:", block.action);
+				JSONArray arguments = new JSONArray(block.parametersArrayList.toArray());
+				temp.put("Parameters:", arguments);
+
+				JSONObject blocks = new JSONObject(block.data);
+				temp.put("Data:", blocks);
+				blocksArrayList.add(temp);
+			}
+
+			for (JSONObject jsonObject : blocksArrayList) {
+				System.out.println(jsonObject.toString(2));
+			}
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
 
 
 	public static void main(String[] args) {
@@ -141,9 +176,9 @@ public class LogFileParser {
 				System.out.flush();
 				LogFileParser obj = new LogFileParser();
 				LogFile lfile = new LogFile(file.getPath());
-				//obj.parseLog(lfile); // Function to parse the log file.
+				obj.parseLog(lfile); // Function to parse the log file.
 				System.out.println("*****************|"+ " FileName:" + file.getName() + " | Size:" + lfile.fileSizeInBytes + " bytes" +"|****************");
-				//obj.serializeToJSON(lfile); // Function to serialize the data-structure into a JSON Object.
+				obj.serializeToJSON(lfile); // Function to serialize the data-structure into a JSON Object.
 				System.out.println();
 
 				System.out.println("Do you have another file? (Y/N) : ");
