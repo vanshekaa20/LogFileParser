@@ -1,7 +1,120 @@
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class LogFileParser {
+
+	public void getLogFileProperties(LogFile file) {
+		File temp = new File(file.filePath);
+		file.fileName = temp.getName();
+		file.fileSizeInBytes = temp.length();
+	}
+
+	
+	
+	
+	//set machineStatus(cassette)  -> ActionType Action (comma seperated arguments)
+	//{							   -> Open Block for data
+	// -name {P430_BLK}			   -> FieldName FieldData 
+	//}							   -> Close Block for data
+	
+	
+	/*
+	 * Takes a LogFile and parses line by line to populate the data structure.
+	 * 
+	 * */
+
+	 
+	public void parseLog (LogFile file){
+		getLogFileProperties(file);
+
+		boolean inBlock = false;
+		try (BufferedReader br = new BufferedReader(new FileReader(new File(file.filePath)))) {
+			String line = "";
+			Block newBlock = null;
+			while ((line = br.readLine()) != null) {
+				if (line.equals(""))
+					continue;
+				// First line or '{'
+				if (!inBlock && newBlock == null){
+
+					// Get Action Type.
+					String[] split = line.split(" ",2);
+					newBlock = new Block();
+					newBlock.actionType = split[0];
+
+					// Get Action.
+					split = split[1].split("\\(");
+					newBlock.action = split[0];
+
+					// Get arguments.
+					String arguments = split[1].substring(0, split[1].length() - 1);
+					if (arguments.contains(","))
+					{
+						split = arguments.split(",");
+						for (String string : split) {
+							if (string.contains(")"))
+								string = string.substring(0, string.length() - 1);
+							newBlock.parametersArrayList.add(string);
+						}
+					}
+				}
+
+				// Handle {
+				if (!inBlock && line.charAt(0) == '{')
+				{
+					inBlock = true;
+					continue;
+				}
+
+				// Handle }
+				if (inBlock && line.charAt(0) == '}')
+				{
+					inBlock = false;
+					file.blocks.add(newBlock);
+					newBlock = null;
+					continue;
+				}
+
+				if (inBlock)
+				{
+					line = line.trim();
+					String[] split = line.split(" ",2);
+					ArrayList<String> value  = new ArrayList<>();
+					if (newBlock != null)
+					{
+						String key = split[0];
+						if (split[1].contains(","))
+						{
+							String[] temp = split[1].split(",");
+							for (String string : temp) {
+								value.add(string);
+							}
+						}
+						else
+						{
+							String temp = split[1];
+							if (temp.charAt(0) == '{' && temp.charAt(temp.length() - 1) == '}')
+							{
+								value.add(temp.substring(1, temp.length() - 1));
+							}
+							else
+								value.add(temp);
+						}
+						newBlock.data.put(key, value);
+					}
+
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
+
 	public static void main(String[] args) {
 		Scanner scanner = new Scanner(System.in);
 		while(true)
@@ -43,7 +156,7 @@ public class LogFileParser {
 				else
 					System.out.flush();
 			}	
-			
+
 		}
 	}
 }
